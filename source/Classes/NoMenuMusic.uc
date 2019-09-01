@@ -1,58 +1,66 @@
-class NoMenuMusic extends Mutator config(NoMenuMusic);
+class NoMenuMusic_20190901 extends Mutator config(NoMenuMusic);
 
-simulated event PostBeginPlay() {
+var config string NoMenuMusicMapList[32];
+var bool bInitialised, bShouldIgnoreMap;
 
-	Super.PostBeginPlay();
+function PreBeginPlay() {
+	if (bInitialised) {
+		return;
+	}
+
+	Level.Game.BaseMutator.AddMutator(self);
+	bInitialised = true;
+
+	// In case it's deleted
+	SaveConfig();
 
 	Log("");
 	Log("+--------------------------------------------------------------------------+");
-	Log("| BTNetNoMenuMusic                                                         |");
+	Log("| NoMenuMusic                                                              |");
 	Log("| ------------------------------------------------------------------------ |");
-	Log("| Authors:     Dizzy    <dizzy@bunnytrack.net>                             |");
-	Log("|              Sapphire <sapphire@bunnytrack.net>                          |");
-	Log("| Description: Prevents UT's default menu music from being played          |");
-	Log("|              on maps which do not have a music track set.                |");
-	Log("| Version:     2017-05-12                                                  |");
-	Log("| Website:     http://www.bunnytrack.net                                   |");
+	Log("| Author:  Sapphire <sapphire@bunnytrack.net>                              |");
+	Log("| Version: 2019-09-01                                                      |");
+	Log("| Website: http://www.bunnytrack.net                                       |");
 	Log("| ------------------------------------------------------------------------ |");
 	Log("| Released under the Creative Commons Attribution-NonCommercial-ShareAlike |");
 	Log("| license. See https://creativecommons.org/licenses/by-nc-sa/4.0/          |");
 	Log("+--------------------------------------------------------------------------+");
+	Log("");
 
+	bShouldIgnoreMap = ShouldIgnoreMap();
 }
 
-function tick(float DeltaTime) {
-
-	local int    i;
-	local string CurrentMusicTrack;
-
-	Super.tick(DeltaTime);
-
-	// Get the current level's audio track
-	CurrentMusicTrack = string(Level.Song);
-
-	if (CurrentMusicTrack == "None") {
-		BlankMusic();
+function Tick(float DeltaTime) {
+	if (!bShouldIgnoreMap && Level.Song == none) {
+		SilenceMusic();
 	}
+}
 
-} 
+function SilenceMusic() {
+	local PlayerPawn P;
 
-function BlankMusic() {
+	foreach AllActors(class'PlayerPawn', P) {
+		P.ClientSetMusic(none, 0, 0, MTRAN_Instant);
+	}
+}
 
-	local PlayerPawn PP; 
-	local Music      BlankTrack;
-	
-	// Set each player's music to blank.umx
-	foreach AllActors(class 'PlayerPawn', PP) {
+function bool ShouldIgnoreMap() {
+	local int i;
+	local string CurrentMap;
 
-		if(PP.Player != None) {
-			BlankTrack = Music(DynamicLoadObject("blank.blank", class'Music'));
-			PP.ClientSetMusic(BlankTrack, 0, 0, MTRAN_Instant);
+	CurrentMap = Left(string(Level), InStr(string(Level), "."));
+
+	for (i = 0; i < ArrayCount(NoMenuMusicMapList); i++) {
+		if (NoMenuMusicMapList[i] == CurrentMap) {
+			Log("NoMenuMusic: ignoring map " $ CurrentMap);
+			Log("");
+
+			return true;
 		}
-
 	}
 
-}
+	Log("NoMenuMusic: silencing menu music for " $ CurrentMap);
+	Log("");
 
-defaultproperties {
+	return false;
 }
